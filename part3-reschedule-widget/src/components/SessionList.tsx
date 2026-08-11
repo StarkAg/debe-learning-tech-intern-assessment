@@ -3,14 +3,30 @@
 import { useState } from "react";
 import type { TutoringSession } from "@/types/reschedule";
 import { formatLocal } from "@/lib/datetime";
+import RescheduleForm from "./RescheduleForm";
 
 interface SessionListProps {
   initialSessions: TutoringSession[];
 }
 
 export default function SessionList({ initialSessions }: SessionListProps) {
-  const [sessions] = useState(initialSessions);
+  const [sessions, setSessions] = useState(initialSessions);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [confirmedId, setConfirmedId] = useState<string | null>(null);
+
+  const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null;
+
+  function handleSuccess(sessionId: string, newSlotUtc: string) {
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === sessionId ? { ...s, datetime: newSlotUtc, status: "pending_reschedule" } : s
+      )
+    );
+    setActiveSessionId(null);
+    setConfirmedId(sessionId);
+    // Purely cosmetic auto-dismiss for the confirmation banner — not a data change.
+    setTimeout(() => setConfirmedId((id) => (id === sessionId ? null : id)), 4000);
+  }
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-4 p-6">
@@ -43,10 +59,18 @@ export default function SessionList({ initialSessions }: SessionListProps) {
         ))}
       </ul>
 
-      {/* RescheduleForm wiring (mock Cloud Function call, validation,
-          loading/error states) lands in the next commit. */}
-      {activeSessionId && (
-        <p className="text-sm text-slate-400">Reschedule form coming next — closing for now.</p>
+      {confirmedId && (
+        <p role="status" className="text-sm text-emerald-600">
+          Reschedule request sent — you&apos;ll hear back once the teacher confirms.
+        </p>
+      )}
+
+      {activeSession && (
+        <RescheduleForm
+          session={activeSession}
+          onClose={() => setActiveSessionId(null)}
+          onSuccess={(newSlotUtc) => handleSuccess(activeSession.id, newSlotUtc)}
+        />
       )}
     </div>
   );
