@@ -76,7 +76,10 @@ export default function RescheduleForm({ session, onClose, onSuccess }: Reschedu
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={(e) => e.target === e.currentTarget && status !== "submitting" && onClose()}
+    >
       <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
         <h2 className="text-lg font-semibold text-slate-900">Request Reschedule</h2>
         <p className="mt-1 text-sm text-slate-500">
@@ -97,7 +100,7 @@ export default function RescheduleForm({ session, onClose, onSuccess }: Reschedu
               min={minSelectable}
               onChange={(e) => setValue(e.target.value)}
               disabled={status === "submitting"}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm transition-colors focus:border-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:bg-slate-50"
               required
             />
             {/* The `min` attribute is the UI half of the lead-time policy —
@@ -119,7 +122,7 @@ export default function RescheduleForm({ session, onClose, onSuccess }: Reschedu
               value={reason}
               onChange={(e) => setReason(e.target.value as RescheduleReason)}
               disabled={status === "submitting"}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm transition-colors focus:border-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:bg-slate-50"
             >
               {REASONS.map((r) => (
                 <option key={r} value={r}>
@@ -130,7 +133,10 @@ export default function RescheduleForm({ session, onClose, onSuccess }: Reschedu
           </div>
 
           {status === "error" && error && (
-            <p role="alert" className="text-sm text-red-600">
+            <p
+              role="alert"
+              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600"
+            >
               {error}
             </p>
           )}
@@ -140,14 +146,14 @@ export default function RescheduleForm({ session, onClose, onSuccess }: Reschedu
               type="button"
               onClick={onClose}
               disabled={status === "submitting"}
-              className="rounded-md px-3 py-2 text-sm text-slate-600 disabled:opacity-50"
+              className="rounded-md px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={status === "submitting"}
-              className="rounded-md bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50"
+              className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
             >
               {status === "submitting" ? "Submitting…" : "Submit request"}
             </button>
