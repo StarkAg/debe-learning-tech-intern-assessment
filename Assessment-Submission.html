@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Debe Learning - Full Stack Development Intern Assessment</title>
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        line-height: 1.6;
+        color: #1f2937;
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 24px 48px;
+      }
+      h1, h2, h3 {
+        color: #0f172a;
+        margin-bottom: 0.5rem;
+      }
+      h1 {
+        font-size: 28px;
+        border-bottom: 2px solid #e5e7eb;
+        padding-bottom: 12px;
+      }
+      h2 {
+        font-size: 22px;
+        margin-top: 32px;
+      }
+      h3 {
+        font-size: 18px;
+        margin-top: 24px;
+      }
+      p, li {
+        font-size: 14px;
+      }
+      ul, ol {
+        padding-left: 22px;
+      }
+      .meta {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin: 20px 0 28px;
+      }
+      .meta p {
+        margin: 6px 0;
+      }
+      .label {
+        font-weight: 700;
+      }
+      code {
+        font-family: Menlo, Monaco, Consolas, monospace;
+        background: #f1f5f9;
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 13px;
+      }
+      .section-gap {
+        margin-top: 10px;
+      }
+      a {
+        color: #2563eb;
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Debe Learning - Full Stack Development Intern Assessment</h1>
+
+    <div class="meta">
+      <p><span class="label">GitHub profile:</span> <a href="https://github.com/StarkAg">https://github.com/StarkAg</a></p>
+      <p><span class="label">Repository:</span> <a href="https://github.com/StarkAg/debe-learning-tech-intern-assessment">https://github.com/StarkAg/debe-learning-tech-intern-assessment</a></p>
+      <p><span class="label">Video link:</span> <a href="https://youtu.be/E_2wRjPNP7k">https://youtu.be/E_2wRjPNP7k</a></p>
+    </div>
+
+    <h2>Part 1 - GitHub Portfolio Walkthrough</h2>
+
+    <h3>1. Ribil - Karnataka Land Records &amp; Village Maps</h3>
+    <p><span class="label">Repository:</span> <a href="https://github.com/StarkAg/Ribil">https://github.com/StarkAg/Ribil</a></p>
+    <p><span class="label">Problem it solves:</span> Karnataka's official land-records portal makes users go through District → Taluk → Hobli → Village just to get one village map PDF, and the site itself is slow and frustrating to use. Ribil makes that process faster and easier through a searchable web interface.</p>
+    <p><span class="label">What I built:</span> I built this solo, end to end. It has a Next.js 14 frontend with cascading dropdowns across 24k+ villages, an Express + Puppeteer backend that fetches the PDFs from the government portal, and an in-memory cache that brought repeat requests down from roughly 10–16 seconds to about 50ms on a cache hit. I also handled deployment myself, including HTTPS setup, Cloudflare cache invalidation, and fixing CORS/404 issues by moving to a same-origin single-container deployment.</p>
+    <p><span class="label">One thing I would do differently:</span> Right now the PDF cache lives in process memory. That means a restart or redeploy clears it, and it also would not scale well across multiple instances. If I revisited it, I would move that cache to Redis or another shared store.</p>
+
+    <h3>2. VentArc - Event Management Platform + CertVault</h3>
+    <p><span class="label">Repository:</span> <a href="https://github.com/StarkAg/VentArc">https://github.com/StarkAg/VentArc</a></p>
+    <p><span class="label">Problem it solves:</span> VentArc helps organizers manage events and also issue certificates that can be verified later without depending on a separate certificate-verification service.</p>
+    <p><span class="label">What I built:</span> I built this solo as well. It uses React + Vite on the frontend, Node/Express on the backend, Convex as the datastore, and Cloudinary for certificate PDF hosting. The CertVault part — certificate issuance plus public verification — is the piece I am most proud of. During deployment and cleanup, I also fixed an auth design issue where the client was being trusted too much by moving sensitive auth operations fully to the server, and I fixed an SPA fallback issue where non-asset 404s were returning HTML instead of a proper 404 response.</p>
+    <p><span class="label">One thing I would do differently:</span> I would define the auth and permission model more explicitly before writing the routes. I caught the client-trust problem while building, but it would have been better to design that part more deliberately from the start.</p>
+    <p><em>The commit history for both projects is incremental and per-feature/per-fix, not a single dumped commit.</em></p>
+
+    <h2>Part 2 - Debugging Round</h2>
+    <p>Files: <code>part2-debug/original.ts</code> and <code>part2-debug/fixed.ts</code></p>
+    <p>I fixed four separate issues in <code>fixed.ts</code>, with a short comment above each one:</p>
+    <ol>
+      <li><strong>Logic bug</strong> — the code checked for existing bookings in <code>teacherRef.collection("bookings")</code>, but wrote new bookings to a separate top-level <code>bookings</code> collection. Because the read and write paths did not match, the duplicate-booking check would never actually work.</li>
+      <li><strong>Async/await bug</strong> — the handler was not <code>async</code>, and the Firestore calls were not awaited. That meant <code>existing</code> was still a pending Promise, so trying to read <code>existing.docs.length</code> would fail at runtime.</li>
+      <li><strong>Typing bug</strong> — <code>data: BookingRequest</code> only helps at compile time. Firebase does not validate incoming payloads against that interface at runtime, so the original function was trusting input it had not actually validated. I fixed that by validating the request with <code>zod</code>.</li>
+      <li><strong>Security bug</strong> — there was no <code>context.auth</code> check, so even an unauthenticated caller could hit the function. I fixed that by requiring auth and verifying that the caller's <code>uid</code> matches the <code>studentId</code> in the request.</li>
+    </ol>
+
+    <h2>Part 3 - Session Reschedule Widget</h2>
+    <p>Directory: <code>part3-reschedule-widget/</code></p>
+    <p><span class="label">What it does:</span> This widget shows a parent's upcoming sessions and lets them request a new time for one of them.</p>
+    <p><span class="label">Run locally:</span></p>
+    <pre>cd part3-reschedule-widget
+npm install
+npm run dev</pre>
+    <p>Main files:</p>
+    <ul>
+      <li><code>src/app/page.tsx</code> — widget page</li>
+      <li><code>src/components/SessionList.tsx</code> — session list + reschedule trigger</li>
+      <li><code>src/components/RescheduleForm.tsx</code> — modal form</li>
+      <li><code>src/lib/datetime.ts</code> — local-time / UTC helpers</li>
+      <li><code>src/lib/requestReschedule.ts</code> — mock backend validation</li>
+      <li><code>src/lib/mock-sessions.ts</code> — sample data</li>
+    </ul>
+    <p><span class="label">Local time and UTC:</span> the browser's <code>datetime-local</code> input gives back a local date/time with no timezone attached. So in <code>lib/datetime.ts</code>, I parse that value as local time first, then convert it to UTC before sending it onward in <code>RescheduleForm</code>. That way the user can pick a time in their own timezone, but the stored value is still one consistent format underneath.</p>
+    <p>One small trap here is that <code>date.toISOString().slice(0, 16)</code> looks like an easy way to fill the datetime input, but it is wrong for this case because <code>toISOString()</code> is always UTC. I used local date getters instead when building the <code>min</code> value for the input.</p>
+    <p><span class="label">2-hour lockout:</span> I enforced the 2-hour rule in two places: first in the UI through the input <code>min</code>, and then again inside <code>requestReschedule()</code>. The UI check is only for user experience. The real validation still has to happen in the function itself, because client-side checks can always be bypassed.</p>
+
+    <h2>Part 4 - Explain-It-Yourself Video</h2>
+    <p><span class="label">Video link:</span> <a href="https://youtu.be/E_2wRjPNP7k">https://youtu.be/E_2wRjPNP7k</a></p>
+    <p>In the video, I walk through <code>SessionList</code> → <code>RescheduleForm</code> → <code>requestReschedule</code>, explain why the app converts local time to UTC, explain why the 2-hour rule is checked both in the form and in the function, and then briefly show what goes wrong if the UTC conversion step is removed.</p>
+  </body>
+</html>

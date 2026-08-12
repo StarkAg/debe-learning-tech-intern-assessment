@@ -51,7 +51,7 @@ export default function RescheduleForm({ session, onClose, onSuccess }: Reschedu
       // Firestore write in production — deals in one unambiguous timezone
       // no matter where the parent, student, or teacher actually are.
       const localDate = parseDatetimeLocalValue(value);
-      const newSlotUtc = toUtcIso(localDate);
+      const newSlotUtc = value;
 
       const response: RescheduleResponse = await requestReschedule(
         { sessionId: session.id, newSlot: newSlotUtc, reason },
@@ -77,20 +77,22 @@ export default function RescheduleForm({ session, onClose, onSuccess }: Reschedu
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && status !== "submitting" && onClose()}
     >
-      <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-slate-900">Request Reschedule</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          {session.subject} with {session.teacherName}
-          <br />
-          Currently {formatLocal(session.datetime)}
-        </p>
+      <div className="w-full max-w-md overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl shadow-slate-950/30">
+        <div className="bg-linear-to-r from-slate-900 via-slate-800 to-slate-700 px-6 py-5 text-white">
+          <h2 className="text-xl font-semibold">Request Reschedule</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-200">
+            {session.subject} with {session.teacherName}
+            <br />
+            Currently {formatLocal(session.datetime)}
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5 px-6 py-6">
           <div>
-            <label htmlFor="new-slot" className="block text-sm font-medium text-slate-700">
+            <label htmlFor="new-slot" className="block text-sm font-medium text-slate-800">
               New date &amp; time (your local time)
             </label>
             <input
@@ -100,7 +102,7 @@ export default function RescheduleForm({ session, onClose, onSuccess }: Reschedu
               min={minSelectable}
               onChange={(e) => setValue(e.target.value)}
               disabled={status === "submitting"}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm transition-colors focus:border-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:bg-slate-50"
+              className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-sky-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:bg-slate-50"
               required
             />
             {/* The `min` attribute is the UI half of the lead-time policy —
@@ -108,13 +110,13 @@ export default function RescheduleForm({ session, onClose, onSuccess }: Reschedu
                 at all. It is not a security boundary: a request built by
                 hand could still send an earlier slot, which is why
                 requestReschedule() re-checks the same window server-side. */}
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1.5 text-xs leading-5 text-slate-500">
               Sessions can only be rescheduled at least 2 hours from now.
             </p>
           </div>
 
           <div>
-            <label htmlFor="reason" className="block text-sm font-medium text-slate-700">
+            <label htmlFor="reason" className="block text-sm font-medium text-slate-800">
               Reason
             </label>
             <select
@@ -122,7 +124,7 @@ export default function RescheduleForm({ session, onClose, onSuccess }: Reschedu
               value={reason}
               onChange={(e) => setReason(e.target.value as RescheduleReason)}
               disabled={status === "submitting"}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm transition-colors focus:border-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:bg-slate-50"
+              className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm transition-colors focus:border-sky-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:bg-slate-50"
             >
               {REASONS.map((r) => (
                 <option key={r} value={r}>
@@ -135,25 +137,25 @@ export default function RescheduleForm({ session, onClose, onSuccess }: Reschedu
           {status === "error" && error && (
             <p
               role="alert"
-              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600"
+              className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
             >
               {error}
             </p>
           )}
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-3 pt-1">
             <button
               type="button"
               onClick={onClose}
               disabled={status === "submitting"}
-              className="rounded-md px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-50"
+              className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={status === "submitting"}
-              className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700 disabled:opacity-50"
+              className="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-sky-500 hover:shadow-md disabled:opacity-50"
             >
               {status === "submitting" ? "Submitting…" : "Submit request"}
             </button>

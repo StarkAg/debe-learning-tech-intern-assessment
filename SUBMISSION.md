@@ -1,4 +1,4 @@
-# Submission — Debe Learning Tech Intern Assessment
+# Debe Learning — Full Stack Development Intern Assessment
 
 ## Part 1 — GitHub Portfolio Walkthrough
 
@@ -6,21 +6,21 @@
 
 ### 1. [Ribil](https://github.com/StarkAg/Ribil) — Karnataka Land Records & Village Maps
 
-**Problem it solves:** Karnataka's official land-records portal requires drilling down through District → Taluk → Hobli → Village to pull a single village map PDF, and the underlying government site is slow and awkward to use directly. Ribil wraps that flow in a fast, searchable Next.js interface so people can find and download the right document without fighting the source portal.
+**Problem it solves:** Karnataka's official land-records portal makes users go through District → Taluk → Hobli → Village just to get one village map PDF, and the site itself is slow and frustrating to use. Ribil makes that process faster and easier through a searchable web interface.
 
-**What I built:** Solo project, end to end — the Next.js 14 App Router frontend with cascading location dropdowns over 24k+ villages, an Express + Puppeteer backend that drives the government portal headlessly to generate the PDFs, and an in-memory caching layer that cut repeat-fetch latency from ~10–16s (cold Puppeteer run) down to ~50ms on a cache hit. Also handled the VPS deployment myself: HTTPS/cert setup, Cloudflare cache invalidation, and a same-origin single-container deploy after hitting CORS/404 issues running frontend and API separately.
+**What I built:** I built this solo, end to end. It has a Next.js 14 frontend with cascading dropdowns across 24k+ villages, an Express + Puppeteer backend that fetches the PDFs from the government portal, and an in-memory cache that brought repeat requests down from roughly 10–16 seconds to about 50ms on a cache hit. I also handled deployment myself, including HTTPS setup, Cloudflare cache invalidation, and fixing CORS/404 issues by moving to a same-origin single-container deployment.
 
-**One thing I'd do differently:** The PDF cache is in-process memory, not a shared store. That means every deploy or crash restart cold-starts the cache, so the first request after any redeploy always pays the full 10–16s Puppeteer cost again, and the cache can't be shared across more than one instance if the app ever needs to scale horizontally. I'd move it to Redis (or similar) so the cache survives restarts and scales independently of the web process.
+**One thing I'd do differently:** Right now the PDF cache lives in process memory. That means a restart or redeploy clears it, and it also would not scale well across multiple instances. If I revisited it, I would move that cache to Redis or another shared store.
 
 ### 2. [VentArc](https://github.com/StarkAg/VentArc) — Event Management Platform + CertVault
 
-**Problem it solves:** Event organizers need to run registration/management for an event and issue participation certificates that attendees (or anyone else) can independently verify later, without depending on a separate third-party certificate-verification vendor.
+**Problem it solves:** VentArc helps organizers manage events and also issue certificates that can be verified later without depending on a separate certificate-verification service.
 
-**What I built:** Solo project — React + Vite frontend, a Node/Express backend, Convex as the datastore, and Cloudinary for certificate PDF hosting. The CertVault module (certificate issuance + public verification lookup) is the part I'm most proud of. Deployment went through the same kind of hardening as Ribil: I initially had auth logic split between client and server in a way that trusted the client too much, and fixed it by moving to `service_role`-scoped Supabase auth calls happening only on the server, plus fixing an SPA-fallback bug where non-asset 404s were serving HTML instead of a proper 404.
+**What I built:** I built this solo as well. It uses React + Vite on the frontend, Node/Express on the backend, Convex as the datastore, and Cloudinary for certificate PDF hosting. The CertVault part — certificate issuance plus public verification — is the piece I am most proud of. During deployment and cleanup, I also fixed an auth design issue where the client was being trusted too much by moving sensitive auth operations fully to the server, and I fixed an SPA fallback issue where non-asset 404s were returning HTML instead of a proper 404 response.
 
-**One thing I'd do differently:** I'd write the auth/permissions model down explicitly before writing the routes, instead of discovering the client-trust issue via a bug fix later. It worked out because I caught it during the same build, but that's the kind of thing that's much cheaper to get right the first time than to patch after routes already exist.
+**One thing I'd do differently:** I would define the auth and permission model more explicitly before writing the routes. I caught the client-trust problem while building, but it would have been better to design that part more deliberately from the start.
 
-*(Commit history for both is real, incremental, per-feature/per-fix history — not a single squashed commit. Happy to walk through either live in the interview.)*
+*(The commit history for both projects is incremental and per-feature/per-fix, not a single dumped commit.)*
 
 ---
 
@@ -28,12 +28,12 @@
 
 See [`part2-debug/original.ts`](./part2-debug/original.ts) and [`part2-debug/fixed.ts`](./part2-debug/fixed.ts).
 
-Four distinct bugs, fixed with an explanatory comment directly above each fix in `fixed.ts`:
+I fixed four separate issues in `fixed.ts`, with a short comment above each one:
 
-1. **Logic bug** — the double-booking check queried `teacherRef.collection("bookings")`, but the actual booking was written to a completely separate top-level `bookings` collection. The check and the write never touched the same location, so the duplicate-slot guard could never catch anything in production — the same slot could be double-booked indefinitely.
-2. **Async/await bug** — the handler wasn't `async`, and neither the existence-check `.get()` nor the final `.add()` was awaited. `existing` was a pending `Promise`, not a `QuerySnapshot`, so `existing.docs` was `undefined` and reading `.length` off it would throw on every single call.
-3. **Typing bug** — `data: BookingRequest` is a compile-time-only annotation; Firebase never validates the incoming payload against it at runtime. The original code trusted the shape blindly, so a malformed or malicious payload would flow straight into a Firestore write. Fixed with a `zod` schema validated at the boundary.
-4. **Security bug** — no `context.auth` check at all, so any caller (authenticated or not) could hit the endpoint and create a booking for any `studentId`/`teacherId`. Fixed by requiring `context.auth` and verifying the caller's `uid` matches the `studentId` on the booking.
+1. **Logic bug** — the code checked for existing bookings in `teacherRef.collection("bookings")`, but wrote new bookings to a separate top-level `bookings` collection. Because the read and write paths did not match, the duplicate-booking check would never actually work.
+2. **Async/await bug** — the handler was not `async`, and the Firestore calls were not awaited. That meant `existing` was still a pending Promise, so trying to read `existing.docs.length` would fail at runtime.
+3. **Typing bug** — `data: BookingRequest` only helps at compile time. Firebase does not validate incoming payloads against that interface at runtime, so the original function was trusting input it had not actually validated. I fixed that by validating the request with `zod`.
+4. **Security bug** — there was no `context.auth` check, so even an unauthenticated caller could hit the function. I fixed that by requiring auth and verifying that the caller's `uid` matches the `studentId` in the request.
 
 ---
 
@@ -54,21 +54,18 @@ npm run dev
 - `src/lib/datetime.ts` — the local-time ↔ UTC conversion helpers
 - `src/types/reschedule.ts` — types shared between the frontend and the mock function
 
-**Local-time / UTC:** `<input type="datetime-local">` is timezone-naive — whatever the parent types is implicitly *their* local time, with no offset attached. Per the JS `Date` spec, a date-time string with no timezone designator parses as local time when passed to `new Date(...)`, so `parseDatetimeLocalValue()` in `lib/datetime.ts` relies on exactly that to interpret the input correctly, then `toUtcIso()` converts to UTC once, right at the point the value leaves the browser in `RescheduleForm`'s submit handler. Everything downstream — the mock function, and a real Firestore write in production — only ever deals with UTC, so comparisons and storage stay unambiguous no matter which timezone the parent, student, or teacher are actually in.
+This widget shows a parent's upcoming sessions and lets them request a new time for one of them.
 
-The one deliberate trap I called out in a comment: computing the `min` attribute for the datetime-local input with `date.toISOString().slice(0, 16)` looks correct but is wrong, because `toISOString()` is always UTC — outside a UTC+0 timezone it would silently set the wrong local cutoff. `toDatetimeLocalValue()` builds the string from the `Date` object's local getters (`getFullYear`, `getHours`, etc.) instead.
+**Local time and UTC:** the browser's `datetime-local` input gives back a local date/time with no timezone attached. So in `lib/datetime.ts`, I parse that value as local time first, then convert it to UTC before sending it onward in `RescheduleForm`. That way the user can pick a time in their own timezone, but the stored value is still one consistent format underneath.
 
-**2-hour lockout:** Enforced twice — once in the UI, via the `min` attribute on the datetime-local input (computed as `now + 2h` in local time), and again inside `requestReschedule()` itself. The UI check is a client-side attribute, not a security boundary — the same lesson as the missing-validation bug in Part 2 — so the mock function re-derives and re-checks the same 2-hour window independently of what the form allowed the parent to submit.
+One small trap here is that `date.toISOString().slice(0, 16)` looks like an easy way to fill the datetime input, but it is wrong for this case because `toISOString()` is always UTC. I used local date getters instead when building the `min` value for the input.
+
+**2-hour lockout:** I enforced the 2-hour rule in two places: first in the UI through the input `min`, and then again inside `requestReschedule()`. The UI check is only for user experience. The real validation still has to happen in the function itself, because client-side checks can always be bypassed.
 
 ---
 
 ## Part 4 — Explain-It-Yourself Video
 
-*(To be recorded — link goes here before submitting.)*
+**Video link:** https://youtu.be/E_2wRjPNP7k
 
-**Video link:** _TODO — paste your Loom/screen-recording link here_
-
-Suggested flow for the recording (4–7 min, unedited, live — no reading from notes):
-1. Open `part3-reschedule-widget/`, walk through `SessionList` → `RescheduleForm` → `requestReschedule`, in that order.
-2. Say out loud, in your own words: why `datetime-local` needs the local-time parsing trick in `lib/datetime.ts`, and why the `min` attribute alone isn't enough for the 2-hour lockout (tie it back to the Part 2 security bug — same "don't trust the client" idea).
-3. Break something on camera — e.g. comment out the `toUtcIso(localDate)` conversion in `RescheduleForm.handleSubmit` and send the raw local-time string instead — then explain what breaks (a parent in a timezone west of UTC would have their reschedule silently interpreted as a different absolute time than the one they picked) and why.
+In the video, I walk through `SessionList` → `RescheduleForm` → `requestReschedule`, explain why the app converts local time to UTC, explain why the 2-hour rule is checked both in the form and in the function, and then briefly show what goes wrong if the UTC conversion step is removed.
